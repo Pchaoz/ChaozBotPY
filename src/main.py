@@ -3,7 +3,7 @@ import csv
 
 from dotenv import load_dotenv
 from decouple import config
-from discord.ext import commands
+from discord.ext import commands, tasks
 from datetime import datetime
 
 bot = commands.Bot(command_prefix=".", intents=discord.Intents.all())
@@ -39,8 +39,46 @@ async def add_birthday(ctx, name: str, date: str):
     except ValueError:
         await ctx.send("El formato de la fecha es incorrecto. Usa DD-MM-AAAA.")
         
+  
+#Este comando te lista todos los cumpleaños
+@bot.command(name="listCumples")
+async def list_birthdays(ctx):
+    try:
+        with open(CSV_FILE, 'r') as file:
+            reader = csv.reader(file)
+            birthdays = list(reader)
+        if birthdays:
+            response = "Cumpleaños registrados: \n"
+            #Por cada cumple en el CSV lo agrega al string con la respuesta final
+            for name, date in birthdays:
+                response += f"{name} - {date} \n"
+            await ctx.send(response)
+        else:
+            await ctx.send("No hay cumpleaños registrados.")
+            
+    except FileNotFoundError:
+        await ctx.send("No hay cumpleaños registrados.")
+
+#Comprobacion diaria que comprueba si es el cumpleaños de alguien
+@tasks.loop(hours=24)
+async def check_birthdays():
+    today = datetime.today().strftime('%d-%m-%Y')
+    channel = bot.get_channel(1138968277360582757) #La ID del canal en el que hara la noticia
     
+    try:
+        with open(CSV_FILE, 'r') as file:
+            reader = csv.reader(file)
+            birthdays = list(reader)
+        for name, date in birthdays:
+            if date == today:
+                await channel.send(f"¡Hoy es el cumpleaños de {name} @everywone!")
+            
+    except FileNotFoundError:
+        print("No se encontró el archivo de cumpleaños.")
+        
     
+
+        
 #Este comando te dice hola mencionandote
 @bot.command(name="hola") 
 async def hi(ctx):

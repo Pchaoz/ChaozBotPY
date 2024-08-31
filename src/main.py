@@ -62,20 +62,27 @@ async def list_birthdays(ctx):
 #Comprobacion diaria que comprueba si es el cumpleaños de alguien
 @tasks.loop(hours=24)
 async def check_birthdays():
-    today = datetime.today().strftime('%d-%m-%Y')
-    channel = bot.get_channel(1138968277360582757) #La ID del canal en el que hara la noticia
+    today = datetime.today().strftime('%d-%m')  # Obtiene solo día y mes de hoy
+    current_year = datetime.today().year  # Obtiene el año en el que estamos
+    channel = bot.get_channel(1138968277360582757)  # La ID del canal para notificar el cumpleaños
     
     try:
         with open(CSV_FILE, 'r') as file:
             reader = csv.reader(file)
             birthdays = list(reader)
         for name, date in birthdays:
-            if date == today:
-                await channel.send(f"¡Hoy es el cumpleaños de {name} @everywone!")
+            # Se extrae solo el dia y el mes
+            birth_date = datetime.strptime(date, "%d-%m-%Y")
+            birth_day_month = birth_date.strftime('%d-%m')
+            
+            # Si el dia y el mes coinciden avisa
+            if birth_day_month == today:
+                age = current_year - birth_date.year
+                await channel.send(f"¡Hoy es el cumpleaños de {name}! 🎉 Cumple {age} años.")
             
     except FileNotFoundError:
         print("No se encontró el archivo de cumpleaños.")
-        
+
     
 
         

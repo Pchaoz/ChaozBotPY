@@ -101,7 +101,7 @@ async def repeatuser(ctx):
 #INFO DEL BOT
 @bot.command(name="info")
 async def description(ctx):
-    embeded_msg = discord.Embed(title="INFORMACION", description="Comandos y mas cositas. El prefijo que teneis que usar para cualquier comando es '>', color=discord.Color.yellow())
+    embeded_msg = discord.Embed(title="INFORMACION", description=f"Comandos y mas cositas. El prefijo que teneis que usar para cualquier comando es: >", color=discord.Color.yellow())
     embeded_msg.set_thumbnail(url=config("BOTAVATAR"))
     embeded_msg.add_field(name=">hola", value="Te saluda el bot de vuelta, totalmente de forma amigable", inline=False)
     embeded_msg.add_field(name=">addCumple", value="Añade un cumpleaños, formato a usar el comando -> NOMBRE DD-MM-AAAA", inline=False)

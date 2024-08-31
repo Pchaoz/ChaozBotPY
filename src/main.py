@@ -101,11 +101,12 @@ async def repeatuser(ctx):
 #INFO DEL BOT
 @bot.command(name="info")
 async def description(ctx):
-    embeded_msg = discord.Embed(title="INFORMACION", description="Pues no se, la descripcion", color=discord.Color.yellow())
-    embeded_msg.set_thumbnail(url=ctx.message.author.avatar)
-    embeded_msg.add_field(name="test", value="valor", inline=False)
-    embeded_msg.set_image(url=ctx.guild.icon)
-    embeded_msg.set_footer(text="Creado por Pchaozz", icon_url=ctx.author.avatar)
+    embeded_msg = discord.Embed(title="INFORMACION", description="Comandos y mas cositas", color=discord.Color.yellow())
+    embeded_msg.set_thumbnail(url=config("BOTAVATAR"))
+    embeded_msg.add_field(name="hola", value="Te saluda el bot de vuelta, totalmente de forma amigable", inline=False)
+    embeded_msg.add_field(name="addCumple", value="Añade un cumpleaños, formato a usar el comando -> NOMBRE DD-MM-AAAA", inline=False)
+    embeded_msg.add_field(name="listCumples", value="Lista todos los cumpleaños en un mensaje normal de texto", inline=False)
+    embeded_msg.set_footer(text="Creado por Pchaozz", icon_url=config("MYDISCORDAVATAR"))
     await ctx.send(embed=embeded_msg)    
     
     

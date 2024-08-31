@@ -6,7 +6,7 @@ from decouple import config
 from discord.ext import commands, tasks
 from datetime import datetime
 
-bot = commands.Bot(command_prefix=".", intents=discord.Intents.all())
+bot = commands.Bot(command_prefix=">", intents=discord.Intents.all())
 
 # Archivo CSV donde se guardan los cumpleaños
 CSV_FILE = 'birthdays.csv'
@@ -101,11 +101,11 @@ async def repeatuser(ctx):
 #INFO DEL BOT
 @bot.command(name="info")
 async def description(ctx):
-    embeded_msg = discord.Embed(title="INFORMACION", description="Comandos y mas cositas", color=discord.Color.yellow())
+    embeded_msg = discord.Embed(title="INFORMACION", description="Comandos y mas cositas. El prefijo que teneis que usar para cualquier comando es '>', color=discord.Color.yellow())
     embeded_msg.set_thumbnail(url=config("BOTAVATAR"))
-    embeded_msg.add_field(name="hola", value="Te saluda el bot de vuelta, totalmente de forma amigable", inline=False)
-    embeded_msg.add_field(name="addCumple", value="Añade un cumpleaños, formato a usar el comando -> NOMBRE DD-MM-AAAA", inline=False)
-    embeded_msg.add_field(name="listCumples", value="Lista todos los cumpleaños en un mensaje normal de texto", inline=False)
+    embeded_msg.add_field(name=">hola", value="Te saluda el bot de vuelta, totalmente de forma amigable", inline=False)
+    embeded_msg.add_field(name=">addCumple", value="Añade un cumpleaños, formato a usar el comando -> NOMBRE DD-MM-AAAA", inline=False)
+    embeded_msg.add_field(name=">listCumples", value="Lista todos los cumpleaños en un mensaje normal de texto", inline=False)
     embeded_msg.set_footer(text="Creado por Pchaozz", icon_url=config("MYDISCORDAVATAR"))
     await ctx.send(embed=embeded_msg)    
     

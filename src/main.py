@@ -40,6 +40,28 @@ async def add_birthday(ctx, name: str, date: str):
         
     except ValueError:
         await ctx.send("El formato de la fecha es incorrecto. Usa DD-MM-AAAA.")
+
+#Este comando sirve para eliminar un cumpleaños      
+@bot.command(name="deleteCumple")
+async def delete_birthday(ctx, name: str):
+    try:
+        with open(CSV_FILE, 'r') as file:
+            reader = csv.reader(file)
+            birthdays = list(reader)
+
+        # Filtra los cumpleaños para excluir el que se desea eliminar
+        new_birthdays = [row for row in birthdays if row[0].lower() != name.lower()]
+
+        #Si lo encuentra lo substituye por una linea en blanco
+        if len(new_birthdays) < len(birthdays):
+            with open(CSV_FILE, 'w', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerows(new_birthdays)
+            await ctx.send(f"Cumpleaños de {name} eliminado.")
+        else:
+            await ctx.send(f"No se encontró un cumpleaños para {name}.")
+    except FileNotFoundError:
+        await ctx.send("No hay cumpleaños registrados.")
         
   
 #Este comando te lista todos los cumpleaños
@@ -66,7 +88,7 @@ async def list_birthdays(ctx):
 async def check_birthdays():
     today = datetime.today().strftime('%d-%m')  # Obtiene solo día y mes de hoy
     current_year = datetime.today().year  # Obtiene el año en el que estamos
-    channel = bot.get_channel(1138968277360582757)  # La ID del canal para notificar el cumpleaños
+    channel = bot.get_channel(765717970055856158)  # La ID del canal para notificar el cumpleaños
     
     try:
         with open(CSV_FILE, 'r') as file:
@@ -77,16 +99,18 @@ async def check_birthdays():
             birth_date = datetime.strptime(date, "%d-%m-%Y")
             birth_day_month = birth_date.strftime('%d-%m')
             
-            # Si el dia y el mes coinciden avisa
             if birth_day_month == today:
                 age = current_year - birth_date.year
-                await channel.send(f"¡Hoy es el cumpleaños de {name}! 🎉 Cumple {age} años.")
-            
+                try:
+                    # Menciona a todos y envía el mensaje
+                    await channel.send(f"¡Hoy es el cumpleaños de {name}! 🎉 Cumple {age} años. @everyone ")
+                except discord.errors.Forbidden:
+                    # Si el bot no tiene permisos para menionar a todo el mundo envia este mensaje en vez de la felicitacion
+                    print(f"No tengo permisos para enviar mensajes o mencionar a todos en el canal {channel.name}.")
+                except Exception as e:
+                    print(f"Error al enviar mensaje: {e}")
     except FileNotFoundError:
         print("No se encontró el archivo de cumpleaños.")
-
-    
-
         
 #Este comando te dice hola mencionandote
 @bot.command(name="hola")
@@ -107,6 +131,7 @@ async def description(ctx):
     embeded_msg.set_thumbnail(url=os.getenv("BOTAVATAR"))
     embeded_msg.add_field(name=">hola", value="Te saluda el bot de vuelta, totalmente de forma amigable", inline=False)
     embeded_msg.add_field(name=">addCumple", value="Añade un cumpleaños, formato a usar el comando -> NOMBRE DD-MM-AAAA", inline=False)
+    embeded_msg.add_field(name=">deleteCumple", value="Elimina un cumpleaños, formato a usar el comando -> NOMBRE", inline=False)
     embeded_msg.add_field(name=">listCumples", value="Lista todos los cumpleaños en un mensaje normal de texto", inline=False)
     embeded_msg.set_footer(text="Creado por Pchaozz", icon_url=os.getenv("MYDISCORDAVATAR"))
     await ctx.send(embed=embeded_msg)    

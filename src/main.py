@@ -1,10 +1,12 @@
 import discord
 import csv
+import os
+import webserver
 
-from dotenv import load_dotenv
 from decouple import config
 from discord.ext import commands, tasks
 from datetime import datetime
+
 
 bot = commands.Bot(command_prefix=">", intents=discord.Intents.all())
 
@@ -87,7 +89,7 @@ async def check_birthdays():
 
         
 #Este comando te dice hola mencionandote
-@bot.command(name="hola") 
+@bot.command(name="hola")
 async def hi(ctx):
     await ctx.send(f"Holiwis {ctx.author.mention}")
     
@@ -102,13 +104,14 @@ async def repeatuser(ctx):
 @bot.command(name="info")
 async def description(ctx):
     embeded_msg = discord.Embed(title="INFORMACION", description=f"Comandos y mas cositas. El prefijo que teneis que usar para cualquier comando es: >", color=discord.Color.yellow())
-    embeded_msg.set_thumbnail(url=config("BOTAVATAR"))
+    embeded_msg.set_thumbnail(url=os.getenv("BOTAVATAR"))
     embeded_msg.add_field(name=">hola", value="Te saluda el bot de vuelta, totalmente de forma amigable", inline=False)
     embeded_msg.add_field(name=">addCumple", value="Añade un cumpleaños, formato a usar el comando -> NOMBRE DD-MM-AAAA", inline=False)
     embeded_msg.add_field(name=">listCumples", value="Lista todos los cumpleaños en un mensaje normal de texto", inline=False)
-    embeded_msg.set_footer(text="Creado por Pchaozz", icon_url=config("MYDISCORDAVATAR"))
+    embeded_msg.set_footer(text="Creado por Pchaozz", icon_url=os.getenv("MYDISCORDAVATAR"))
     await ctx.send(embed=embeded_msg)    
     
     
 #Basicamente intenta conectar al bot usando el token del ENV
-bot.run(config("TOKEN"))
+webserver.keep_alive()
+bot.run(os.getenv("DISCORD_TOKEN"))

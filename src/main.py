@@ -78,7 +78,7 @@ async def list_birthdays(ctx):
 async def check_birthdays():
     
     #Para evitar que la base de datos entre en reposo, actualizo cada 24h la ultima vez que se hace un check de los cumpleaños
-    date = datetime.today().date().strftime()
+    date = datetime.today().date().strftime("%Y-%m-%d")
     response = supabase.table("table_updates").update({"lastCheck": date}).eq("id", 1).execute()
     
     if (respose.status_code == 200):

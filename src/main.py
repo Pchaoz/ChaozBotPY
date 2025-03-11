@@ -81,7 +81,7 @@ async def check_birthdays():
     date = datetime.today().date().strftime("%Y-%m-%d")
     response = supabase.table("table_updates").update({"lastCheck": date}).eq("id", 1).execute()
     
-    if (respose.status_code == 200):
+    if (response.status_code == 200):
         print('Actualizado con exito')
         
     else :

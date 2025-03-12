@@ -78,17 +78,16 @@ async def list_birthdays(ctx):
 async def check_birthdays():
     
     #Para evitar que la base de datos entre en reposo, actualizo cada 24h la ultima vez que se hace un check de los cumpleaños
-    date = datetime.today().date().strftime("%Y-%m-%d")
-    response = supabase.table("table_updates").update({"lastCheck": date}).eq("id", 1).execute()
+    date = datetime.today()
+    today = datetime.today().date().strftime("%d-%m-%Y")
+    print(today)
     
-    if (response.status_code == 200):
-        print('Actualizado con exito')
+    try:
+        supabase.table("table_updates").update({"last_update": today}).eq("id", 1).execute()
+    except Exception as e:
+        print(f"Error al actualizar la tabla de actualizaciones: {e}")
         
-    else :
-        print('ERROR AL ACTUALIZAR EL DIA, CODIGO DE RESPUESTA ' + respose.status_code)
-    
-    today = datetime.today().strftime('%d-%m')  # Obtiene solo día y mes de hoy
-    current_year = datetime.today().year  # Obtiene el año en el que estamos
+    current_year = date.today().year  # Obtiene el año en el que estamos
     channel = bot.get_channel(765717970055856158)  # La ID del canal para notificar el cumpleaños
 
     if channel is None:

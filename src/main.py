@@ -54,7 +54,7 @@ async def delete_birthday(ctx, name: str):
         await ctx.send(f"Cumpleaños de {name} eliminado.")
     except Exception as e:
         await ctx.send(f"Error al eliminar el cumpleaños: {e}")
-  
+
 #Este comando te lista todos los cumpleaños
 @bot.command(name="listCumples")
 async def list_birthdays(ctx):
@@ -63,31 +63,33 @@ async def list_birthdays(ctx):
         response = supabase.table("birthdays").select("*").execute()
         birthdays = response.data
 
+        # Obtiene la última fecha de actualización de la tabla table_updates
+        update_response = supabase.table("table_updates").select("last_update").eq("id", 1).execute()
+        last_update = update_response.data[0]['last_update'] if update_response.data else "Desconocido"
+
         if birthdays:
-            response_message = "Cumpleaños registrados: \n"
+            response_message = f"Cumpleaños registrados (última comprobación: {last_update}): \n"
             for birthday in birthdays:
                 response_message += f"{birthday['name']} - {birthday['date']} \n"
             await ctx.send(response_message)
         else:
-            await ctx.send("No hay cumpleaños registrados.")
+            await ctx.send(f"No hay cumpleaños registrados (última comprobación: {last_update}).")
     except Exception as e:
         await ctx.send(f"Error al listar los cumpleaños: {e}")
-
-#Comprobacion diaria que comprueba si es el cumpleaños de alguien
+        
+# Comprobacion diaria que comprueba si es el cumpleaños de alguien
 @tasks.loop(hours=24)
 async def check_birthdays():
-    
-    #Para evitar que la base de datos entre en reposo, actualizo cada 24h la ultima vez que se hace un check de los cumpleaños
+    # Para evitar que la base de datos entre en reposo, actualizo cada 24h la ultima vez que se hace un check de los cumpleaños
     date = datetime.today()
-    today = datetime.today().date().strftime("%d-%m-%Y")
-    print(today)
-    
+    today = datetime.today().strftime("%d-%m-%Y | %H:%M")
+
     try:
         supabase.table("table_updates").update({"last_update": today}).eq("id", 1).execute()
     except Exception as e:
         print(f"Error al actualizar la tabla de actualizaciones: {e}")
-        
-    current_year = date.today().year  # Obtiene el año en el que estamos
+
+    current_year = date.year  # Obtiene el año en el que estamos
     channel = bot.get_channel(765717970055856158)  # La ID del canal para notificar el cumpleaños
 
     if channel is None:
@@ -100,10 +102,12 @@ async def check_birthdays():
         birthdays = response.data
 
         # Comprueba si hay algún cumpleaños hoy
+        birthday_found = False
         for birthday in birthdays:
             birth_date = datetime.strptime(birthday['date'], "%d-%m-%Y")
             birth_day_month = birth_date.strftime('%d-%m')
             if birth_day_month == today:
+                birthday_found = True
                 age = current_year - birth_date.year
                 try:
                     await channel.send(f"@everyone ¡Hoy es el cumpleaños de {birthday['name']}! 🎉 Cumple {age} años.")
@@ -111,9 +115,11 @@ async def check_birthdays():
                     print(f"No tengo permisos para enviar mensajes o mencionar a todos en el canal {channel.name}.")
                 except Exception as e:
                     print(f"Error al enviar mensaje: {e}")
+
+        if not birthday_found:
+            await channel.send("Hoy no es el cumpleaños de nadie.")
     except Exception as e:
-        print(f"Error al comprobar cumpleaños: {e}")
-        
+        print(f"Error al comprobar cumpleaños: {e}") 
         
 #Este comando te dice hola mencionandote
 @bot.command(name="hola")

@@ -22,6 +22,7 @@ bot = commands.Bot(command_prefix=">", intents=discord.Intents.all())
 @bot.event
 async def on_ready():
     print("Bot inciado correctamente")
+    update_database().start() #Actualiza la base de datos cada 5h
     check_birthdays.start() #Comprueba si hay algun cumpleaños al iniciarse
 
 #SOBRE LOS @bot.command()  

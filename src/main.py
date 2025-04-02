@@ -21,9 +21,14 @@ bot = commands.Bot(command_prefix=">", intents=discord.Intents.all())
 #Este evento sirve para avisar cuando el bot ha acabado de levantarse
 @bot.event
 async def on_ready():
-    print("Bot inciado correctamente")
-    update_database().start() #Actualiza la base de datos cada 5h
-    check_birthdays.start() #Comprueba si hay algun cumpleaños al iniciarse
+    print("Bot iniciado correctamente")
+    await bot.change_presence(activity=discord.Game(name="Usa >info para ver mis comandos!")) # Cambia el estado del bot al iniciar
+
+    if not update_database.is_running():
+        update_database.start() # Inicia el bucle de actualización de la base de datos
+
+    if not check_birthdays.is_running():
+        check_birthdays.start() # Inicia el bucle de comprobación de cumpleaños
 
 #SOBRE LOS @bot.command()  
 #Si dentro de los partensesis haces un aliases con contenido 
@@ -94,9 +99,11 @@ async def update_database():
 # Comprobacion diaria que comprueba si es el cumpleaños de alguien
 @tasks.loop(hours=24)
 async def check_birthdays():
+    date = datetime.today()
+    today_str = date.strftime("%d-%m")
+    current_year = date.year
 
-    current_year = date.year  # Obtiene el año en el que estamos
-    channel = bot.get_channel(765717970055856158)  # La ID del canal para notificar el cumpleaños
+    channel = bot.get_channel(765717970055856158)  # Reemplazar esto por algo dinámico en el futuro
 
     if channel is None:
         print("Error: No se pudo encontrar el canal.")
@@ -106,13 +113,14 @@ async def check_birthdays():
         # Obtiene todos los cumpleaños de la base de datos
         response = supabase.table("birthdays").select("*").execute()
         birthdays = response.data
-
-        # Comprueba si hay algún cumpleaños hoy
+        
+        # Verifica si hoy es el cumpleaños de alguien
         birthday_found = False
         for birthday in birthdays:
             birth_date = datetime.strptime(birthday['date'], "%d-%m-%Y")
             birth_day_month = birth_date.strftime('%d-%m')
-            if birth_day_month == today:
+
+            if birth_day_month == today_str:
                 birthday_found = True
                 age = current_year - birth_date.year
                 try:
@@ -121,11 +129,12 @@ async def check_birthdays():
                     print(f"No tengo permisos para enviar mensajes o mencionar a todos en el canal {channel.name}.")
                 except Exception as e:
                     print(f"Error al enviar mensaje: {e}")
-
+        #Si no es el cumpleaños de nadie, lo avisa
         if not birthday_found:
             await channel.send("Hoy no es el cumpleaños de nadie.")
     except Exception as e:
-        print(f"Error al comprobar cumpleaños: {e}") 
+        print(f"Error al comprobar cumpleaños: {e}")
+
         
 #Este comando te dice hola mencionandote
 @bot.command(name="hola")

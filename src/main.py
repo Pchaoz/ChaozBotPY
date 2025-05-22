@@ -160,6 +160,52 @@ async def description(ctx):
     embeded_msg.set_footer(text="Creado por Pchaozz", icon_url=os.getenv("MYDISCORDAVATAR"))
     await ctx.send(embed=embeded_msg)    
     
+@bot.command(name="banporid")
+async def ban_user_by_id(ctx, user_id: int, *, reason: str = "No se especificó motivo."):
+    ID_AUTORIZADO = 690680552629469184
+
+    if ctx.author.id != ID_AUTORIZADO:
+        await ctx.send(" No tienes permiso para usar este comando.")
+        return
+
+    try:
+        user = await bot.fetch_user(user_id)
+        await ctx.guild.ban(user, reason=reason)
+        await ctx.send(f"Usuario con ID `{user_id}` ha sido baneado. Motivo: {reason}")
+    except discord.Forbidden:
+        await ctx.send("No tengo permisos suficientes para banear a ese usuario.")
+    except discord.NotFound:
+        await ctx.send("No se encontró un usuario con esa ID.")
+    except Exception as e:
+        await ctx.send(f"Error inesperado: {e}")
+
+@bot.command(name="unbanporid")
+async def unban_user_by_id(ctx, user_id: int):
+    ID_AUTORIZADO = 690680552629469184
+
+    if ctx.author.id != ID_AUTORIZADO:
+        await ctx.send("No tienes permiso para usar este comando.")
+        return
+
+    try:
+        user = await bot.fetch_user(user_id)
+        bans = [ban async for ban in ctx.guild.bans()]
+
+
+        for ban_entry in bans:
+            if ban_entry.user.id == user_id:
+                await ctx.guild.unban(ban_entry.user)
+                await ctx.send(f"Usuario `{ban_entry.user}` ha sido desbaneado.")
+                return
+
+        await ctx.send("Ese usuario no está baneado en este servidor.")
+    except discord.Forbidden:
+        await ctx.send("No tengo permisos suficientes para desbanear a ese usuario.")
+    except Exception as e:
+        await ctx.send(f"Error inesperado: {e}")
+
+
+    
     
 #Basicamente intenta conectar al bot usando el token del ENV
 webserver.keep_alive()

@@ -151,14 +151,21 @@ async def repeatuser(ctx):
 #INFO DEL BOT
 @bot.command(name="info")
 async def description(ctx):
-    embeded_msg = discord.Embed(title="INFORMACION", description=f"Comandos y mas cositas. El prefijo que teneis que usar para cualquier comando es: >", color=discord.Color.yellow())
+    embeded_msg = discord.Embed(
+        title="INFORMACION",
+        description=f"Comandos y más cositas. El prefijo que tenéis que usar para cualquier comando es: `>`",
+        color=discord.Color.yellow()
+    )
     embeded_msg.set_thumbnail(url=os.getenv("BOTAVATAR"))
     embeded_msg.add_field(name=">hola", value="Te saluda el bot de vuelta, totalmente de forma amigable", inline=False)
-    embeded_msg.add_field(name=">addCumple", value="Añade un cumpleaños, formato a usar el comando -> NOMBRE DD-MM-AAAA", inline=False)
-    embeded_msg.add_field(name=">deleteCumple", value="Elimina un cumpleaños, formato a usar el comando -> NOMBRE", inline=False)
-    embeded_msg.add_field(name=">listCumples", value="Lista todos los cumpleaños en un mensaje normal de texto", inline=False)
+    embeded_msg.add_field(name=">addCumple", value="Añade un cumpleaños. Formato: `>addCumple NOMBRE DD-MM-AAAA`", inline=False)
+    embeded_msg.add_field(name=">deleteCumple", value="Elimina un cumpleaños. Formato: `>deleteCumple NOMBRE`", inline=False)
+    embeded_msg.add_field(name=">listCumples", value="Lista todos los cumpleaños registrados", inline=False)
+    embeded_msg.add_field(name=">cumplesHoy", value="Muestra si hoy es el cumpleaños de alguien registrado", inline=False)
     embeded_msg.set_footer(text="Creado por Pchaozz", icon_url=os.getenv("MYDISCORDAVATAR"))
-    await ctx.send(embed=embeded_msg)    
+    
+    await ctx.send(embed=embeded_msg)
+ 
     
 @bot.command(name="banporid")
 async def ban_user_by_id(ctx, user_id: int, *, reason: str = "No se especificó motivo."):
@@ -204,6 +211,52 @@ async def unban_user_by_id(ctx, user_id: int):
     except Exception as e:
         await ctx.send(f"Error inesperado: {e}")
 
+@bot.command(name="cumplesHoy")
+async def birthdays_today(ctx):
+    date = datetime.today()
+    today_str = date.strftime("%d-%m")
+    current_year = date.year
+
+    try:
+        response = supabase.table("birthdays").select("*").execute()
+        birthdays = response.data
+        
+        birthday_found = False
+        message = "🎉 **Cumpleaños de hoy:**\n"
+
+        for birthday in birthdays:
+            birth_date = datetime.strptime(birthday['date'], "%d-%m-%Y")
+            birth_day_month = birth_date.strftime('%d-%m')
+
+            if birth_day_month == today_str:
+                birthday_found = True
+                age = current_year - birth_date.year
+                message += f"🎂 {birthday['name']} cumple {age} años.\n"
+
+        if birthday_found:
+            await ctx.send(message)
+        else:
+            await ctx.send("Hoy no es el cumpleaños de nadie.")
+    except Exception as e:
+        await ctx.send(f"Error al comprobar cumpleaños: {e}")
+
+@bot.command(name="reiniciarCumples")
+async def restart_check_birthdays(ctx):
+    ID_AUTORIZADO = 690680552629469184 
+
+    if ctx.author.id != ID_AUTORIZADO:
+        await ctx.send("No tienes permiso para usar este comando.")
+        return
+
+    try:
+        if check_birthdays.is_running():
+            check_birthdays.cancel()
+            await ctx.send("Tarea de verificación de cumpleaños detenida.")
+        
+        check_birthdays.start()
+        await ctx.send("Tarea de verificación de cumpleaños reiniciada.")
+    except RuntimeError as e:
+        await ctx.send(f"Error al reiniciar la tarea: {e}")
 
     
     

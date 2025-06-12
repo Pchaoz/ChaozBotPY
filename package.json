@@ -1,0 +1,12 @@
+{
+  "name": "chaozbot",
+  "version": "1.0.0",
+  "description": "Bot para cumpleaños de amigos de Discord",
+  "main": "src/main.py",
+  "scripts": {
+    "start": "python3 src/main.py"
+  },
+  "engines": {
+    "node": ">=16"
+  }
+}

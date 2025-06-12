@@ -10,7 +10,8 @@ from datetime import datetime
 
 #COSAS DE LA BASE DE DATOS 
 
-supabase: Client = create_client(os.getenv("DATABASE_URL"), os.getenv("DATABASE_KEY"))
+supabase: Client = create_client(config("DATABASE_URL"), config("DATABASE_KEY"))
+print("TOKEN:", os.getenv("DISCORD_TOKEN")[:10])
 
 #Inicializar el bot con el prefijo (>)
 bot = commands.Bot(command_prefix=">", intents=discord.Intents.all())
@@ -153,19 +154,17 @@ async def repeatuser(ctx):
 async def description(ctx):
     embeded_msg = discord.Embed(
         title="INFORMACION",
-        description=f"Comandos y más cositas. El prefijo que tenéis que usar para cualquier comando es: `>`",
+        description="Comandos y más cositas. El prefijo que tenéis que usar para cualquier comando es: `>`",
         color=discord.Color.yellow()
     )
-    embeded_msg.set_thumbnail(url=os.getenv("BOTAVATAR"))
+    embeded_msg.set_thumbnail(url=config("BOTAVATAR"))  # <-- Cambiado
     embeded_msg.add_field(name=">hola", value="Te saluda el bot de vuelta, totalmente de forma amigable", inline=False)
     embeded_msg.add_field(name=">addCumple", value="Añade un cumpleaños. Formato: `>addCumple NOMBRE DD-MM-AAAA`", inline=False)
     embeded_msg.add_field(name=">deleteCumple", value="Elimina un cumpleaños. Formato: `>deleteCumple NOMBRE`", inline=False)
     embeded_msg.add_field(name=">listCumples", value="Lista todos los cumpleaños registrados", inline=False)
     embeded_msg.add_field(name=">cumplesHoy", value="Muestra si hoy es el cumpleaños de alguien registrado", inline=False)
-    embeded_msg.set_footer(text="Creado por Pchaozz", icon_url=os.getenv("MYDISCORDAVATAR"))
-    
+    embeded_msg.set_footer(text="Creado por Pchaozz", icon_url=config("MYDISCORDAVATAR")) 
     await ctx.send(embed=embeded_msg)
- 
     
 @bot.command(name="banporid")
 async def ban_user_by_id(ctx, user_id: int, *, reason: str = "No se especificó motivo."):
@@ -262,4 +261,4 @@ async def restart_check_birthdays(ctx):
     
 #Basicamente intenta conectar al bot usando el token del ENV
 webserver.keep_alive()
-bot.run(os.getenv("DISCORD_TOKEN"))
+bot.run(config("TOKEN"))

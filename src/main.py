@@ -33,6 +33,7 @@ def get_info_embed():
 # ====================
 # EVENTO PRINCIPAL
 # ====================
+
 @bot.event
 async def on_ready():
     print("Bot iniciado correctamente")
@@ -53,6 +54,17 @@ async def on_ready():
 # ====================
 # COMANDOS DE PREFIJO
 # ====================
+
+@bot.command(name="resetSlash")
+async def clear_slash(ctx):
+    if ctx.author.id != int(config("OWNER_ID")):
+        await ctx.send("No tienes permiso para esto.")
+        return
+    bot.tree.clear_commands(guild=None)
+    await bot.tree.sync()
+    await ctx.send("Todos los slash commands eliminados. Reinicia el bot para registrar solo los nuevos.")
+
+
 @bot.command(name="info")
 async def info_command(ctx):
     await ctx.send(embed=get_info_embed())

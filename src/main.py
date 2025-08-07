@@ -7,7 +7,7 @@ from decouple import config
 from supabase import create_client, Client
 from discord.ext import commands, tasks
 from discord import app_commands
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Supabase
 supabase: Client = create_client(config("DATABASE_URL"), config("DATABASE_KEY"))
@@ -108,9 +108,19 @@ async def birthdays_today(ctx):
                 age = current_year - bdate.year
                 msg += f"🎂 {b['name']} cumple {age} años\n"
                 found = True
-        await ctx.send(msg if found else "Hoy no es el cumpleaños de nadie.")
+
+        if found:
+            await ctx.send(msg)
+        else:
+            proximo = get_next_birthday(birthdays)
+            if proximo:
+                nombre, fecha = proximo
+                await ctx.send(f"No es el cumpleaños de nadie, el próximo cumpleaños es de {nombre} el día {fecha}.")
+            else:
+                await ctx.send("No es el cumpleaños de nadie, y no hay más cumpleaños registrados.")
     except Exception as e:
         await ctx.send(f"Error al comprobar cumpleaños: {e}")
+
 
 @bot.command(name="reiniciarCumples")
 async def restart_check_birthdays(ctx):
@@ -218,9 +228,19 @@ async def slash_cumpleshoy(interaction: discord.Interaction):
                 age = current_year - bdate.year
                 msg += f"🎂 {b['name']} cumple {age} años\n"
                 found = True
-        await interaction.response.send_message(msg if found else "Hoy no es el cumpleaños de nadie.")
+
+        if found:
+            await interaction.response.send_message(msg)
+        else:
+            proximo = get_next_birthday(birthdays)
+            if proximo:
+                nombre, fecha = proximo
+                await interaction.response.send_message(f"No es el cumpleaños de nadie, el próximo cumpleaños es de {nombre} el día {fecha}.")
+            else:
+                await interaction.response.send_message("No es el cumpleaños de nadie, y no hay más cumpleaños registrados.")
     except Exception as e:
         await interaction.response.send_message(f"Error: {e}")
+
 
 # ====================
 # TAREAS PERIÓDICAS
@@ -251,9 +271,37 @@ async def check_birthdays():
                 await channel.send(f"@everyone Hoy es el cumple de {b['name']}! 🎉 ({age} años)")
                 found = True
         if not found:
-            await channel.send("Hoy no es el cumpleaños de nadie.")
+            proximo = get_next_birthday(birthdays)
+            if proximo:
+                nombre, fecha = proximo
+                await channel.send(f"No es el cumpleaños de nadie, el próximo cumpleaños es de {nombre} el día {fecha}.")
+            else:
+                await channel.send("No es el cumpleaños de nadie, y no hay más cumpleaños registrados.")
     except Exception as e:
         print(f"Error al comprobar cumpleaños: {e}")
+
+# ====================
+# OTRAS FUNCIONES
+# ====================
+
+def get_next_birthday(birthdays):
+    today = datetime.today()
+    candidates = []
+    for b in birthdays:
+        try:
+            bdate = datetime.strptime(b["date"], "%d-%m-%Y")
+            # Crear fecha del cumple este año
+            next_birthday = bdate.replace(year=today.year)
+            if next_birthday < today:
+                next_birthday = next_birthday.replace(year=today.year + 1)
+            candidates.append((next_birthday, b["name"]))
+        except Exception:
+            continue
+    if not candidates:
+        return None
+    # Ordenar y devolver el más próximo
+    next_birthday, name = min(candidates, key=lambda x: x[0])
+    return name, next_birthday.strftime("%d-%m")
 
 # ====================
 # EJECUCIÓN

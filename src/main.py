@@ -273,35 +273,36 @@ async def check_birthdays():
         if not found:
             proximo = get_next_birthday(birthdays)
             if proximo:
-                nombre, fecha = proximo
-                await channel.send(f"No es el cumpleaños de nadie, el próximo cumpleaños es de {nombre} el día {fecha}.")
+                nombre, fecha, dias = proximo
+                texto_dias = "mañana" if dias == 1 else f"en {dias} días"
+                await channel.send(f"No es el cumpleaños de nadie. El próximo cumpleaños es de {nombre} el día {fecha} ({texto_dias}).")
             else:
                 await channel.send("No es el cumpleaños de nadie, y no hay más cumpleaños registrados.")
     except Exception as e:
         print(f"Error al comprobar cumpleaños: {e}")
+
 
 # ====================
 # OTRAS FUNCIONES
 # ====================
 
 def get_next_birthday(birthdays):
-    today = datetime.today()
+    today = datetime.today().date()  # Solo la fecha
     candidates = []
     for b in birthdays:
         try:
             bdate = datetime.strptime(b["date"], "%d-%m-%Y")
-            # Crear fecha del cumple este año
-            next_birthday = bdate.replace(year=today.year)
+            next_birthday = bdate.replace(year=today.year).date()
             if next_birthday < today:
                 next_birthday = next_birthday.replace(year=today.year + 1)
-            candidates.append((next_birthday, b["name"]))
+            days_until = (next_birthday - today).days
+            candidates.append((days_until, next_birthday, b["name"]))
         except Exception:
             continue
     if not candidates:
         return None
-    # Ordenar y devolver el más próximo
-    next_birthday, name = min(candidates, key=lambda x: x[0])
-    return name, next_birthday.strftime("%d-%m")
+    days_until, next_birthday, name = min(candidates, key=lambda x: x[0])
+    return name, next_birthday.strftime("%d-%m"), days_until
 
 # ====================
 # EJECUCIÓN

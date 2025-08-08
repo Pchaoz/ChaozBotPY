@@ -7,17 +7,49 @@ from decouple import config
 from supabase import create_client, Client
 from discord.ext import commands, tasks
 from discord import app_commands
-from datetime import datetime, timedelta
 
-# Supabase
+# Fechas / horas
+from datetime import datetime, timedelta, time, timezone
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError  # Python 3.9+
+
+# ====================
+# SUPABASE
+# ====================
 supabase: Client = create_client(config("DATABASE_URL"), config("DATABASE_KEY"))
+
+# ====================
+# CONFIGURACIÓN / BOT
+# ====================
+# Zona horaria (cámbiala en .env con TIMEZONE si quieres otra)
+def _load_tz():
+    tzname = config("TIMEZONE", default="Europe/Madrid")
+    try:
+        # intento directo (si tzdata está disponible para este Python)
+        return ZoneInfo(tzname)
+    except ZoneInfoNotFoundError:
+        try:
+            # intenta cargar la base IANA desde el paquete tzdata (Windows)
+            import tzdata  # noqa: F401
+            return ZoneInfo(tzname)
+        except Exception:
+            # último recurso: usa la zona local del sistema o UTC
+            print(f"[WARN] No se encontró tzdata para '{tzname}'. Usando la zona local del sistema.")
+            return datetime.now().astimezone().tzinfo or timezone.utc
+
+TZ = _load_tz()
+
+# Helper de hora local (una sola fuente de la verdad)
+def now_local() -> datetime:
+    return datetime.now(TZ)
 
 # Inicializar el bot
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix=">", intents=intents)
 tree = bot.tree
 
-# Embed de información
+# ====================
+# EMBED INFORMACIÓN
+# ====================
 def get_info_embed():
     embed = discord.Embed(title="INFORMACION", color=discord.Color.yellow())
     embed.set_thumbnail(url=config("BOTAVATAR"))
@@ -33,7 +65,6 @@ def get_info_embed():
 # ====================
 # EVENTO PRINCIPAL
 # ====================
-
 @bot.event
 async def on_ready():
     print("Bot iniciado correctamente")
@@ -42,6 +73,7 @@ async def on_ready():
     if not update_database.is_running():
         update_database.start()
 
+    # Ejecuta la tarea diaria a una hora fija local (09:00 por defecto)
     if not check_birthdays.is_running():
         check_birthdays.start()
 
@@ -54,7 +86,6 @@ async def on_ready():
 # ====================
 # COMANDOS DE PREFIJO
 # ====================
-
 @bot.command(name="resetSlash")
 async def clear_slash(ctx):
     if ctx.author.id != int(config("OWNER_ID")):
@@ -63,7 +94,6 @@ async def clear_slash(ctx):
     bot.tree.clear_commands(guild=None)
     await bot.tree.sync()
     await ctx.send("Todos los slash commands eliminados. Reinicia el bot para registrar solo los nuevos.")
-
 
 @bot.command(name="info")
 async def info_command(ctx):
@@ -107,8 +137,8 @@ async def list_birthdays(ctx):
 
 @bot.command(name="cumplesHoy")
 async def birthdays_today(ctx):
-    today_str = datetime.today().strftime("%d-%m")
-    current_year = datetime.today().year
+    today_str = now_local().strftime("%d-%m")
+    current_year = now_local().year
 
     try:
         birthdays = supabase.table("birthdays").select("*").execute().data
@@ -126,13 +156,13 @@ async def birthdays_today(ctx):
         else:
             proximo = get_next_birthday(birthdays)
             if proximo:
-                nombre, fecha = proximo
-                await ctx.send(f"No es el cumpleaños de nadie, el próximo cumpleaños es de {nombre} el día {fecha}.")
+                nombre, fecha, dias = proximo
+                texto_dias = "mañana" if dias == 1 else f"en {dias} días"
+                await ctx.send(f"No es el cumpleaños de nadie, el próximo cumpleaños es de {nombre} el día {fecha} ({texto_dias}).")
             else:
                 await ctx.send("No es el cumpleaños de nadie, y no hay más cumpleaños registrados.")
     except Exception as e:
         await ctx.send(f"Error al comprobar cumpleaños: {e}")
-
 
 @bot.command(name="reiniciarCumples")
 async def restart_check_birthdays(ctx):
@@ -228,8 +258,8 @@ async def slash_listcumples(interaction: discord.Interaction):
 
 @tree.command(name="cumpleshoy", description="Verifica si hoy es el cumpleaños de alguien")
 async def slash_cumpleshoy(interaction: discord.Interaction):
-    today_str = datetime.today().strftime("%d-%m")
-    current_year = datetime.today().year
+    today_str = now_local().strftime("%d-%m")
+    current_year = now_local().year
     try:
         birthdays = supabase.table("birthdays").select("*").execute().data
         found = False
@@ -246,30 +276,32 @@ async def slash_cumpleshoy(interaction: discord.Interaction):
         else:
             proximo = get_next_birthday(birthdays)
             if proximo:
-                nombre, fecha = proximo
-                await interaction.response.send_message(f"No es el cumpleaños de nadie, el próximo cumpleaños es de {nombre} el día {fecha}.")
+                nombre, fecha, dias = proximo
+                texto_dias = "mañana" if dias == 1 else f"en {dias} días"
+                await interaction.response.send_message(f"No es el cumpleaños de nadie, el próximo cumpleaños es de {nombre} el día {fecha} ({texto_dias}).")
             else:
                 await interaction.response.send_message("No es el cumpleaños de nadie, y no hay más cumpleaños registrados.")
     except Exception as e:
         await interaction.response.send_message(f"Error: {e}")
-
 
 # ====================
 # TAREAS PERIÓDICAS
 # ====================
 @tasks.loop(hours=5)
 async def update_database():
-    today = datetime.today().strftime("%d-%m-%Y | %H:%M")
+    # Guardamos la hora local en la tabla de control
+    today = now_local().strftime("%d-%m-%Y | %H:%M")
     try:
         supabase.table("table_updates").update({"last_update": today}).eq("id", 1).execute()
     except Exception as e:
         print(f"Error al actualizar tabla: {e}")
 
-@tasks.loop(hours=24)
+# Aviso diario a una hora fija local (09:00). Ajusta la hora si quieres.
+@tasks.loop(time=time(0, 0, tzinfo=TZ))
 async def check_birthdays():
     await bot.wait_until_ready()
-    today_str = datetime.today().strftime("%d-%m")
-    current_year = datetime.today().year
+    today_str = now_local().strftime("%d-%m")
+    current_year = now_local().year
     channel = bot.get_channel(765717970055856158)
     if not channel:
         print("Canal no encontrado")
@@ -293,18 +325,19 @@ async def check_birthdays():
     except Exception as e:
         print(f"Error al comprobar cumpleaños: {e}")
 
-
 # ====================
 # OTRAS FUNCIONES
 # ====================
-
 def get_next_birthday(birthdays):
-    today = datetime.today().date()  # Solo la fecha
+    # Trabajamos siempre en fecha local
+    today = now_local().date()
     candidates = []
     for b in birthdays:
         try:
             bdate = datetime.strptime(b["date"], "%d-%m-%Y")
+            # Cumple del año actual
             next_birthday = bdate.replace(year=today.year).date()
+            # Si ya pasó, movemos al año siguiente
             if next_birthday < today:
                 next_birthday = next_birthday.replace(year=today.year + 1)
             days_until = (next_birthday - today).days

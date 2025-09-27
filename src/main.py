@@ -75,7 +75,7 @@ def get_info_embed():
     ), inline=False)
 
     # Info
-    embed.add_field(name="ℹ🤑 Otros", value=(
+    embed.add_field(name="🤑 Otros", value=(
         "`/hola` o `>hola` → El bot te saluda\n"
         "`/info` o `>info` → Muestra este mensaje de ayuda"
     ), inline=False)

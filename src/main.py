@@ -68,9 +68,9 @@ def get_info_embed():
 
     # Admin
     embed.add_field(name="🛠️ Administración", value=(
-        "`>banporid <id> [motivo]` → Banear usuario por ID\n"
-        "`>unbanporid <id>` → Desbanear usuario por ID\n"
-        "`>resetSlash` → Elimina todos los slash commands\n"
+        "`>banporid <id> [motivo]` → Banear usuario por ID (solo Owner)\n"
+        "`>unbanporid <id>` → Desbanear usuario por ID (solo Owner)\n"
+        "`>resetSlash` → Elimina todos los slash commands (solo Owner)\n"
         "`>reiniciarCumples` → Reinicia la tarea de cumpleaños (solo Owner)"
     ), inline=False)
 

@@ -10,7 +10,7 @@ from discord import app_commands
 
 # Fechas / horas
 from datetime import datetime, timedelta, time, timezone
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError  # Python 3.9+
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError 
 
 # ====================
 # SUPABASE
@@ -20,16 +20,16 @@ supabase: Client = create_client(config("DATABASE_URL"), config("DATABASE_KEY"))
 # ====================
 # CONFIGURACIÓN / BOT
 # ====================
-# Zona horaria (cámbiala en .env con TIMEZONE si quieres otra)
+# Zona horaria
 def _load_tz():
     tzname = config("TIMEZONE", default="Europe/Madrid")
     try:
-        # intento directo (si tzdata está disponible para este Python)
+        # intento directo
         return ZoneInfo(tzname)
     except ZoneInfoNotFoundError:
         try:
-            # intenta cargar la base IANA desde el paquete tzdata (Windows)
-            import tzdata  # noqa: F401
+            # intenta cargar la base IANA desde el paquete tzdata
+            import tzdata
             return ZoneInfo(tzname)
         except Exception:
             # último recurso: usa la zona local del sistema o UTC
@@ -38,27 +38,48 @@ def _load_tz():
 
 TZ = _load_tz()
 
-# Helper de hora local (una sola fuente de la verdad)
+# Helper de hora local
 def now_local() -> datetime:
     return datetime.now(TZ)
 
 # Inicializar el bot
 intents = discord.Intents.all()
-bot = commands.Bot(command_prefix=">", intents=intents)
+bot = commands.Bot(command_prefix=">", intents=intents, help_command=None)
 tree = bot.tree
 
 # ====================
 # EMBED INFORMACIÓN
 # ====================
 def get_info_embed():
-    embed = discord.Embed(title="INFORMACION", color=discord.Color.yellow())
+    embed = discord.Embed(
+        title="Lista de comandos",
+        description="El prefijo es: `>` o también puedes usar los slash commands `/`",
+        color=discord.Color.yellow()
+    )
     embed.set_thumbnail(url=config("BOTAVATAR"))
-    embed.add_field(name="Comandos y más cositas", value="El prefijo que tenéis que usar para cualquier comando es: `>`", inline=False)
-    embed.add_field(name="/hola o >hola", value="Te saluda el bot", inline=False)
-    embed.add_field(name="/addcumple o >addCumple", value="Añade cumpleaños. Formato: `NOMBRE DD-MM-AAAA`", inline=False)
-    embed.add_field(name="/deletecumple o >deleteCumple", value="Elimina un cumpleaños. Formato: `NOMBRE`", inline=False)
-    embed.add_field(name="/listcumples o >listCumples", value="Lista los cumpleaños", inline=False)
-    embed.add_field(name="/cumpleshoy o >cumplesHoy", value="Muestra si hoy es el cumpleaños de alguien", inline=False)
+
+    # Cumples
+    embed.add_field(name="🎂 Cumpleaños", value=(
+        "`/addcumple` o `>addCumple` → Añade cumpleaños. Formato: `NOMBRE DD-MM-AAAA`\n"
+        "`/deletecumple` o `>deleteCumple` → Elimina un cumpleaños. Formato: `NOMBRE`\n"
+        "`/listcumples` o `>listCumples` → Lista todos los cumpleaños registrados\n"
+        "`/cumpleshoy` o `>cumplesHoy` → Muestra si hoy es el cumple de alguien"
+    ), inline=False)
+
+    # Admin
+    embed.add_field(name="🛠️ Administración", value=(
+        "`>banporid <id> [motivo]` → Banear usuario por ID\n"
+        "`>unbanporid <id>` → Desbanear usuario por ID\n"
+        "`>resetSlash` → Elimina todos los slash commands\n"
+        "`>reiniciarCumples` → Reinicia la tarea de cumpleaños (solo Owner)"
+    ), inline=False)
+
+    # Info
+    embed.add_field(name="ℹ🤑 Otros", value=(
+        "`/hola` o `>hola` → El bot te saluda\n"
+        "`/info` o `>info` → Muestra este mensaje de ayuda"
+    ), inline=False)
+
     embed.set_footer(text="Creado por Pchaozz", icon_url=config("MYDISCORDAVATAR"))
     return embed
 
@@ -73,7 +94,7 @@ async def on_ready():
     if not update_database.is_running():
         update_database.start()
 
-    # Ejecuta la tarea diaria a una hora fija local (09:00 por defecto)
+    # Ejecuta la tarea diaria a una hora fija local
     if not check_birthdays.is_running():
         check_birthdays.start()
 

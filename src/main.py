@@ -148,6 +148,8 @@ async def list_birthdays(ctx):
         last_update = update_response.data[0]['last_update'] if update_response.data else "Desconocido"
 
         if birthdays:
+            birthdays.sort(key=lambda x: datetime.strftime(x['date'],  "%Y-%m-%d").strftime("%m-%d"))
+
             msg = f"🎂 Cumples registrados (última actualización: {last_update}):\n"
             msg += "\n".join(f"{b['name']} - {b['date']}" for b in birthdays)
         else:

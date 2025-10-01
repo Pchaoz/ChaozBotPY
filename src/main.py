@@ -9,7 +9,7 @@ from discord.ext import commands, tasks
 from discord import app_commands
 
 # Fechas / horas
-from datetime import datetime, timedelta, time, timezone
+from datetime import datetime, date, timedelta, time, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError 
 
 # ====================
@@ -148,7 +148,13 @@ async def list_birthdays(ctx):
         last_update = update_response.data[0]['last_update'] if update_response.data else "Desconocido"
 
         if birthdays:
-            birthdays.sort(key=lambda x: datetime.strftime(x['date'],  "%Y-%m-%d").strftime("%m-%d"))
+
+            def parse_fecha(f):
+                if isinstance(f, (datetime, date)):
+                    return f
+                return datetime.strptime(f, "%d-%m-%Y")
+
+            birthdays.sort(key=lambda x: parse_fecha(x['date']).strftime("%m-%d"))
 
             msg = f"🎂 Cumples registrados (última actualización: {last_update}):\n"
             msg += "\n".join(f"{b['name']} - {b['date']}" for b in birthdays)

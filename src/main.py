@@ -1,7 +1,6 @@
 import discord
 import csv
 import os
-import webserver
 
 from decouple import config
 from supabase import create_client, Client
@@ -9,7 +8,7 @@ from discord.ext import commands, tasks
 from discord import app_commands
 
 # Fechas / horas
-from datetime import datetime, date, timedelta, time, timezone
+from datetime import datetime, date, time, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError 
 
 # ====================
@@ -381,5 +380,4 @@ def get_next_birthday(birthdays):
 # ====================
 # EJECUCIÓN
 # ====================
-webserver.keep_alive()
 bot.run(config("DISCORD_TOKEN"))

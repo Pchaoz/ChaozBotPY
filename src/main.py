@@ -108,6 +108,43 @@ async def on_ready():
         print(f"Error al sincronizar slash commands: {e}")
 
 # ====================
+# EMBED INFORMACIÓN
+# ====================
+def get_info_embed():
+    embed = discord.Embed(
+        title="Lista de comandos",
+        description="El prefijo es: `>` o también puedes usar los slash commands `/`",
+        color=discord.Color.yellow()
+    )
+    embed.set_thumbnail(url=config("BOTAVATAR", default="https://cdn.discordapp.com/avatars/1199687784437387365/a_6e2eff574f64daa0df8bc5211ad533b3.gif"))
+
+    # Cumples
+    embed.add_field(name="🎂 Cumpleaños", value=(
+        "`/addcumple` o `>addCumple` → Añade cumpleaños. Formato: `NOMBRE DD-MM-AAAA`\n"
+        "`/deletecumple` o `>deleteCumple` → Elimina un cumpleaños. Formato: `NOMBRE`\n"
+        "`/listcumples` o `>listCumples` → Lista todos los cumpleaños registrados\n"
+        "`/cumpleshoy` o `>cumplesHoy` → Muestra si hoy es el cumple de alguien"
+    ), inline=False)
+
+    # Admin
+    embed.add_field(name="🛠️ Administración", value=(
+        "`>banporid <id> [motivo]` → Banear usuario por ID (solo Owner)\n"
+        "`>unbanporid <id>` → Desbanear usuario por ID (solo Owner)\n"
+        "`>resetSlash` → Elimina todos los slash commands (solo Owner)\n"
+        "`>reiniciarCumples` → Reinicia la tarea de cumpleaños (solo Owner)"
+    ), inline=False)
+
+    # Info
+    embed.add_field(name="🤑 Otros", value=(
+        "`/hola` o `>hola` → El bot te saluda\n"
+        "`/info` o `>info` → Muestra este mensaje de ayuda"
+    ), inline=False)
+
+    embed.set_footer(text="Creado por Pchaozz", icon_url=config("MYDISCORDAVATAR", default="https://cdn.discordapp.com/avatars/690680552629469184/a_cb2b335c021d301da0cb883fe38b3eb4.gif"))
+    return embed
+
+
+# ====================
 # FILTRO AUTOMÁTICO DE GIFS
 # ====================
 @bot.event
@@ -115,7 +152,7 @@ async def on_message(message):
     if message.author.bot:
         return
 
-    # print(f"[DEBUG] Mensaje en {message.channel.id}: {message.content}")
+    #print(f"[DEBUG] Mensaje en {message.channel.id}: {message.content}")
 
     contiene_gif = False
     gif_name = None
@@ -147,8 +184,8 @@ async def on_message(message):
             gif_name = extraer_nombre_gif(embed.url)
 
     # DEBUG
-    # if gif_name:
-        # print(f"[GIF DETECTADO] {gif_name}")
+    if gif_name:
+        print(f"[GIF DETECTADO] {gif_name}")
 
     # ====================
     # OWNER

@@ -1,6 +1,6 @@
 import discord
-import csv
-import os
+import re
+import random
 
 from decouple import config
 from supabase import create_client, Client
@@ -12,75 +12,78 @@ from datetime import datetime, date, time, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError 
 
 # ====================
+# FUNCION EXTRAER NOMBRE DE GIF
+# ====================
+def extraer_nombre_gif(url):
+    match = re.search(r'([\w-]+\.gif)', url)
+    return match.group(1) if match else None
+
+# ====================
 # SUPABASE
 # ====================
 supabase: Client = create_client(config("DATABASE_URL"), config("DATABASE_KEY"))
 
 # ====================
+# OWNER
+# ====================
+OWNER_ID = 690680552629469184
+
+def es_admin(ctx):
+    return (
+        ctx.author.id == OWNER_ID or 
+        ctx.author.guild_permissions.administrator
+    )
+
+# ====================
+# GIF BLACKLIST CACHE
+# ====================
+gif_blacklist_cache = []
+
+def load_gif_blacklist():
+    global gif_blacklist_cache
+    try:
+        response = supabase.table("gif_blacklist").select("*").execute()
+        gif_blacklist_cache = [row["gif_value"].strip() for row in response.data]
+        print(f"[GIF] Blacklist cargada: {len(gif_blacklist_cache)} elementos")
+    except Exception as e:
+        print(f"[GIF] Error cargando blacklist: {e}")
+
+# ====================
+# 🔥 CANALES DONDE FILTRAR
+# ====================
+GIF_FILTER_CHANNELS = [
+    765717970055856158, #Chat global
+    973193910547542057, #Canal de pruebas
+    1138932431022473276, #Canal de multimedia
+    1405643983941799989, #Canal de Starrail
+]
+
+# ====================
 # CONFIGURACIÓN / BOT
 # ====================
-# Zona horaria
 def _load_tz():
     tzname = config("TIMEZONE", default="Europe/Madrid")
     try:
-        # intento directo
         return ZoneInfo(tzname)
     except ZoneInfoNotFoundError:
         try:
-            # intenta cargar la base IANA desde el paquete tzdata
             import tzdata
             return ZoneInfo(tzname)
         except Exception:
-            # último recurso: usa la zona local del sistema o UTC
             print(f"[WARN] No se encontró tzdata para '{tzname}'. Usando la zona local del sistema.")
             return datetime.now().astimezone().tzinfo or timezone.utc
 
 TZ = _load_tz()
 
-# Helper de hora local
 def now_local() -> datetime:
     return datetime.now(TZ)
 
-# Inicializar el bot
-intents = discord.Intents.all()
+intents = discord.Intents.default()
+intents.message_content = True
+intents.guilds = True
+intents.members = True
 bot = commands.Bot(command_prefix=">", intents=intents, help_command=None)
 tree = bot.tree
-
-# ====================
-# EMBED INFORMACIÓN
-# ====================
-def get_info_embed():
-    embed = discord.Embed(
-        title="Lista de comandos",
-        description="El prefijo es: `>` o también puedes usar los slash commands `/`",
-        color=discord.Color.yellow()
-    )
-    embed.set_thumbnail(url=config("BOTAVATAR"))
-
-    # Cumples
-    embed.add_field(name="🎂 Cumpleaños", value=(
-        "`/addcumple` o `>addCumple` → Añade cumpleaños. Formato: `NOMBRE DD-MM-AAAA`\n"
-        "`/deletecumple` o `>deleteCumple` → Elimina un cumpleaños. Formato: `NOMBRE`\n"
-        "`/listcumples` o `>listCumples` → Lista todos los cumpleaños registrados\n"
-        "`/cumpleshoy` o `>cumplesHoy` → Muestra si hoy es el cumple de alguien"
-    ), inline=False)
-
-    # Admin
-    embed.add_field(name="🛠️ Administración", value=(
-        "`>banporid <id> [motivo]` → Banear usuario por ID (solo Owner)\n"
-        "`>unbanporid <id>` → Desbanear usuario por ID (solo Owner)\n"
-        "`>resetSlash` → Elimina todos los slash commands (solo Owner)\n"
-        "`>reiniciarCumples` → Reinicia la tarea de cumpleaños (solo Owner)"
-    ), inline=False)
-
-    # Info
-    embed.add_field(name="🤑 Otros", value=(
-        "`/hola` o `>hola` → El bot te saluda\n"
-        "`/info` o `>info` → Muestra este mensaje de ayuda"
-    ), inline=False)
-
-    embed.set_footer(text="Creado por Pchaozz", icon_url=config("MYDISCORDAVATAR"))
-    return embed
 
 # ====================
 # EVENTO PRINCIPAL
@@ -90,10 +93,11 @@ async def on_ready():
     print("Bot iniciado correctamente")
     await bot.change_presence(activity=discord.Game(name="Usa /info o >info"))
 
+    load_gif_blacklist()
+
     if not update_database.is_running():
         update_database.start()
 
-    # Ejecuta la tarea diaria a una hora fija local
     if not check_birthdays.is_running():
         check_birthdays.start()
 
@@ -102,6 +106,149 @@ async def on_ready():
         print("Slash commands sincronizados correctamente.")
     except Exception as e:
         print(f"Error al sincronizar slash commands: {e}")
+
+# ====================
+# FILTRO AUTOMÁTICO DE GIFS
+# ====================
+@bot.event
+async def on_message(message):
+    if message.author.bot:
+        return
+
+    # print(f"[DEBUG] Mensaje en {message.channel.id}: {message.content}")
+
+    contiene_gif = False
+    gif_name = None
+
+    # ====================
+    # ADJUNTOS
+    # ====================
+    for attachment in message.attachments:
+        if attachment.filename.lower().endswith(".gif"):
+            contiene_gif = True
+            gif_name = attachment.filename
+
+    # ====================
+    # LINKS
+    # ====================
+    urls = re.findall(r'(https?://[^\s]+)', message.content)
+
+    for url in urls:
+        if ".gif" in url:
+            contiene_gif = True
+            gif_name = extraer_nombre_gif(url)
+
+    # ====================
+    # EMBEDS
+    # ====================
+    for embed in message.embeds:
+        if embed.url and ".gif" in embed.url:
+            contiene_gif = True
+            gif_name = extraer_nombre_gif(embed.url)
+
+    # DEBUG
+    # if gif_name:
+        # print(f"[GIF DETECTADO] {gif_name}")
+
+    # ====================
+    # OWNER
+    # ====================
+    if message.author.id == OWNER_ID:
+
+        if contiene_gif and gif_name and gif_name in gif_blacklist_cache:
+            await message.delete()
+
+        await bot.process_commands(message)
+        return
+
+    # ====================
+    # FILTRO POR CANALES
+    # ====================
+    if GIF_FILTER_CHANNELS:
+        if message.channel.id not in GIF_FILTER_CHANNELS:
+            await bot.process_commands(message)
+            return
+
+    # ====================
+    # FILTRADO NORMAL
+    # ====================
+    if contiene_gif and gif_name:
+        print(f"[CHECK] '{gif_name.strip()}' vs {gif_blacklist_cache}")
+        if gif_name.strip() in gif_blacklist_cache:
+            try:
+                print(f"[GIF BLOQUEADO] {gif_name}")
+                await message.delete()
+            except Exception as e:
+                print(f"[GIF ERROR] {e}")
+
+    await bot.process_commands(message)
+
+
+# ====================
+# COMANDOS GIF
+# ====================
+
+@bot.command(name="filtrargif")
+async def filtrar_gif(ctx, *, url: str):
+
+    if not es_admin(ctx):
+        await ctx.send("No tienes permisos ❌")
+        return
+
+    if url in gif_blacklist_cache:
+        await ctx.send("Ese GIF ya está en la blacklist ⚠️")
+        return
+
+    try:
+        supabase.table("gif_blacklist").insert({
+            "gif_value": url
+        }).execute()
+
+        gif_blacklist_cache.append(url)
+
+        await ctx.send("GIF añadido a la blacklist 🚫")
+
+    except Exception as e:
+        await ctx.send(f"Error: {e}")
+
+
+@bot.command(name="quitargif")
+async def quitar_gif(ctx, *, url: str):
+
+    if not es_admin(ctx):
+        await ctx.send("No tienes permisos ❌")
+        return
+
+    try:
+        supabase.table("gif_blacklist").delete().eq("gif_value", url).execute()
+
+        if url in gif_blacklist_cache:
+            gif_blacklist_cache.remove(url)
+
+        await ctx.send("GIF eliminado de la blacklist ✅")
+
+    except Exception as e:
+        await ctx.send(f"Error: {e}")
+
+
+@bot.command(name="listargifs")
+async def listar_gifs(ctx):
+
+    if not es_admin(ctx):
+        await ctx.send("No tienes permisos ❌")
+        return
+
+    if not gif_blacklist_cache:
+        await ctx.send("La blacklist está vacía 📭")
+        return
+
+    msg = "🚫 **GIFs bloqueados:**\n"
+    msg += "\n".join(f"- {gif}" for gif in gif_blacklist_cache[:50])
+
+    if len(gif_blacklist_cache) > 50:
+        msg += "\n... (demasiados para mostrar)"
+
+    await ctx.send(msg)
 
 # ====================
 # COMANDOS DE PREFIJO

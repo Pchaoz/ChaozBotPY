@@ -49,13 +49,12 @@ def load_gif_blacklist():
         print(f"[GIF] Error cargando blacklist: {e}")
 
 # ====================
-# 🔥 CANALES DONDE FILTRAR
+# CANALES DONDE FILTRAR
 # ====================
 GIF_FILTER_CHANNELS = [
-    765717970055856158, #Chat global
-    973193910547542057, #Canal de pruebas
-    1138932431022473276, #Canal de multimedia
-    1405643983941799989, #Canal de Starrail
+    int(ch.strip())
+    for ch in config("GIF_FILTER_CHANNELS", default="").split(",")
+    if ch.strip()
 ]
 
 # ====================
@@ -514,7 +513,7 @@ async def check_birthdays():
     await bot.wait_until_ready()
     today_str = now_local().strftime("%d-%m")
     current_year = now_local().year
-    channel = bot.get_channel(765717970055856158)
+    channel = bot.get_channel(int(config("BIRTHDAY_CHANNEL_ID")))
     if not channel:
         print("Canal no encontrado")
         return

@@ -15,8 +15,29 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 # FUNCION EXTRAER NOMBRE DE GIF
 # ====================
 def extraer_nombre_gif(url):
-    match = re.search(r'([\w-]+\.gif)', url)
+    match = re.search(r'([\w-]+\.(?:gif|webp))', url, re.IGNORECASE)
     return match.group(1) if match else None
+
+
+def es_url_gif(url):
+    """
+    Detecta si una URL corresponde a un GIF, incluyendo:
+    - Enlaces directos .gif
+    - WEBP animados servidos como gifs (tweet_video de Twitter/X,
+      fxtwitter, vxtwitter, etc.)
+    - Enlaces reenviados a través del proxy de imagenes de Discord
+      (images-ext-*.discordapp.net / media.discordapp.net), que
+      incluyen la URL original en texto plano dentro del propio link.
+    """
+    url_lower = url.lower()
+
+    if ".gif" in url_lower:
+        return True
+
+    if ".webp" in url_lower and ("animated=true" in url_lower or "tweet_video" in url_lower):
+        return True
+
+    return False
 
 # ====================
 # SUPABASE
@@ -170,7 +191,7 @@ async def on_message(message):
     urls = re.findall(r'(https?://[^\s]+)', message.content)
 
     for url in urls:
-        if ".gif" in url:
+        if es_url_gif(url):
             contiene_gif = True
             gif_name = extraer_nombre_gif(url)
 
@@ -178,9 +199,15 @@ async def on_message(message):
     # EMBEDS
     # ====================
     for embed in message.embeds:
-        if embed.url and ".gif" in embed.url:
+        if embed.url and es_url_gif(embed.url):
             contiene_gif = True
             gif_name = extraer_nombre_gif(embed.url)
+        elif embed.thumbnail and embed.thumbnail.url and es_url_gif(embed.thumbnail.url):
+            contiene_gif = True
+            gif_name = extraer_nombre_gif(embed.thumbnail.url)
+        elif embed.video and embed.video.url and es_url_gif(embed.video.url):
+            contiene_gif = True
+            gif_name = extraer_nombre_gif(embed.video.url)
 
     # DEBUG
     if gif_name:
